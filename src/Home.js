@@ -1,5 +1,6 @@
 import React from "react";
 import currencies from "./utils/currencies";
+import { checkStatus, json } from "./utils/fetchUtils";
 
 class Home extends React.Component {
   constructor() {
@@ -10,8 +11,26 @@ class Home extends React.Component {
     };
   }
 
+  componentDidMount() {
+    this.getRates(this.state.base);
+  }
+
   changeBase = (event) => {
     this.setState({ base: event.target.value });
+  };
+
+  getRatesData = (base) => {
+    fetch(`https://api.frankfurter.app/latest?from=${base}`)
+      .then(checkStatus)
+      .then(json)
+      .then((data) => {
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        console.log(data);
+        this.setState({ rates: data.rates });
+      })
+      .catch((error) => console.error(error.message));
   };
   render() {
     const { base, rates } = this.state;
