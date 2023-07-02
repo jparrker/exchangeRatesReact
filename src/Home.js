@@ -1,6 +1,7 @@
 import React from "react";
 import currencies from "./utils/currencies";
 import { checkStatus, json } from "./utils/fetchUtils";
+import CurrencyTable from "./CurrencyTable";
 
 class Home extends React.Component {
   constructor() {
@@ -8,18 +9,21 @@ class Home extends React.Component {
     this.state = {
       base: "USD",
       rates: null,
+      loading: true,
     };
   }
 
   componentDidMount() {
-    this.getRates(this.state.base);
+    this.getRatesData(this.state.base);
   }
 
   changeBase = (event) => {
     this.setState({ base: event.target.value });
+    this.getRatesData(event.target.value);
   };
 
   getRatesData = (base) => {
+    this.setState({ loading: true });
     fetch(`https://api.frankfurter.app/latest?from=${base}`)
       .then(checkStatus)
       .then(json)
@@ -27,15 +31,26 @@ class Home extends React.Component {
         if (data.error) {
           throw new Error(data.error);
         }
-        console.log(data);
-        this.setState({ rates: data.rates });
+
+        const rates = Object.keys(data.rates)
+          .filter((acronym) => acronym !== base)
+          .map((acronym) => ({
+            acronym,
+            rate: data.rates[acronym],
+            name: currencies[acronym].name,
+            symbol: currencies[acronym].symbol,
+          }));
+
+        this.setState({ rates, loading: false });
       })
       .catch((error) => console.error(error.message));
   };
+
   render() {
-    const { base, rates } = this.state;
+    const { base, rates, loading } = this.state;
+
     return (
-      <>
+      <React.Fragment>
         <form className="p-3 bg-light form-inline justify-content-center">
           <h3 className="mb-2">
             Base currency: <b className="mr-2">1</b>
@@ -44,18 +59,19 @@ class Home extends React.Component {
             value={base}
             onChange={this.changeBase}
             className="form-control form-control-lg mb-2"
+            disabled={loading}
           >
-            {Object.keys(currencies).map((currency) => {
-              return (
-                <option key={currency} value={currency}>
-                  {currency}
-                </option>
-              );
-            })}
+            {Object.keys(currencies).map((currencyAcronym) => (
+              <option key={currencyAcronym} value={currencyAcronym}>
+                {currencyAcronym}
+              </option>
+            ))}
           </select>
         </form>
-      </>
+        <CurrencyTable base={base} rates={rates} />
+      </React.Fragment>
     );
   }
 }
+
 export default Home;
